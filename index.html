@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MonkeyZone — Random Video Chat</title>
+<style>
+:root { color-scheme: dark; --bg:#050505; --panel:#151515; --panel2:#252525; --text:#f5f5f7; --muted:#a1a1a6; --line:#363638; --blue:#0a84ff; --blue2:#0077ed; --green:#30d158; --red:#ff453a; }
+* { box-sizing:border-box; }
+body { margin:0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); }
+#app { min-height:100vh; width:100%; background:var(--bg); }
+.topbar { height:64px; padding:0 clamp(18px,5vw,64px); display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); background:#000; }
+.brand { display:flex; align-items:center; gap:11px; font-weight:800; letter-spacing:-.04em; font-size:20px; }
+.logo { display:grid; place-items:center; width:38px;height:38px;border-radius:12px;background:var(--blue);color:white;box-shadow:0 7px 20px #5875f533; }
+.pill { display:inline-flex; align-items:center; gap:7px; border:1px solid var(--line); padding:7px 11px; border-radius:99px; color:var(--muted); font-size:12px; font-weight:650; }
+.dot { width:7px;height:7px;border-radius:50%;background:#f0b44b; }
+main { max-width:1080px; margin:0 auto; padding:28px 20px 48px; }
+.hero { text-align:center; max-width:650px; margin:0 auto 30px; }
+.eyebrow { color:var(--blue); text-transform:uppercase; letter-spacing:.14em; font-size:11px; font-weight:850; }
+h1 { font-size:clamp(34px,5vw,52px); line-height:1.04; letter-spacing:-.055em; margin:13px 0 14px; }
+.hero p { color:var(--muted); font-size:16px; line-height:1.65; margin:0; }
+.layout { display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:stretch; }
+.card { background:var(--panel); border:1px solid var(--line); border-radius:24px; padding:24px; box-shadow:0 14px 36px #0005; }
+.card h2 { font-size:19px; margin:0 0 7px; letter-spacing:-.03em; }
+.sub { margin:0 0 22px; color:var(--muted); font-size:13px; line-height:1.55; }
+.fieldlabel { display:block; font-size:12px; color:var(--muted); font-weight:750; margin:16px 0 8px; }
+input { width:100%; border:1px solid var(--line); background:var(--panel2); color:var(--text); border-radius:12px; padding:13px 14px; font:inherit; outline:none; }
+input:focus { border-color:var(--blue); box-shadow:0 0 0 3px #5875f522; }
+.actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+button { border:0; cursor:pointer; border-radius:12px; padding:12px 16px; font:inherit; font-weight:750; transition:transform .12s, opacity .12s; }
+button:hover { transform:translateY(-1px); } button:disabled { opacity:.45; cursor:not-allowed; transform:none; }
+.primary { background:var(--blue); color:#fff; flex:1; } .primary:hover { background:var(--blue2); }
+.secondary { background:var(--panel2); color:var(--text); border:1px solid var(--line); }
+.roomcode { font-size:30px; letter-spacing:.16em; font-weight:900; font-variant-numeric:tabular-nums; margin:8px 0; }
+.hidden { display:none !important; }
+.roomstatus { background:var(--panel2); border:1px solid var(--line); border-radius:15px; padding:16px; margin-top:18px; }
+.statusline { display:flex; justify-content:space-between; gap:10px; align-items:center; font-size:13px; }
+.statusline strong { font-size:13px; }
+.preview { display:flex; flex-direction:column; min-height:100%; }
+.screen { min-height:390px; flex:1; border-radius:18px; background:#202022; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:16px; color:white; position:relative; overflow:hidden; }
+.localvideo { display:none; position:absolute; inset:0; width:100%; height:100%; max-height:none; object-fit:cover; border-radius:18px; margin:0; background:#101012; transform:scaleX(-1); }
+.avatar { width:78px;height:78px;border-radius:50%;background:linear-gradient(135deg,#b4b4b9,#56565d);display:grid;place-items:center;font-size:30px;font-weight:850;box-shadow:0 10px 35px #0004; margin-bottom:14px; z-index:1; }
+.screen h3 { margin:0 0 7px; font-size:18px; } .screen p { color:#b9c6e0; font-size:12px; margin:0; line-height:1.5; max-width:260px; }
+.screenbadge { position:absolute;top:13px;left:13px;font-size:11px;padding:7px 9px;border-radius:99px;background:#0008;border:1px solid #ffffff24;color:#f5f5f7; z-index:2; }
+.controls { display:flex; justify-content:center; gap:22px; margin-top:18px; }
+.round { width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:#333336;color:#fff;border:0;padding:0;font-size:22px; }
+.round.active { background:#48484c; color:#fff; border-color:#5b75bb; } .round.end { background:var(--red); color:white; border-color:var(--red); transform:rotate(135deg); }
+.note { margin-top:14px; font-size:12px; color:var(--muted); line-height:1.55; }
+.notice { margin-top:22px; border:1px solid #e8c76b77; background:light-dark(#fff8e4,#302817); border-radius:16px; padding:16px 18px; display:flex; gap:12px; align-items:flex-start; }
+.notice strong { display:block; margin-bottom:4px; font-size:13px; } .notice p { margin:0; font-size:12px; line-height:1.55; color:var(--muted); }
+.steps { display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px; }
+.step { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:16px; }
+.num { color:var(--blue);font-size:11px;font-weight:900;letter-spacing:.12em; } .step h3 { margin:9px 0 6px;font-size:14px; } .step p { margin:0;color:var(--muted);font-size:12px;line-height:1.55; }
+footer { text-align:center;color:var(--muted);font-size:11px;margin-top:30px; }
+.toast { margin-top:12px; padding:11px 12px; border-radius:11px; font-size:12px; background:var(--panel2); border:1px solid var(--line); color:var(--muted); line-height:1.5; }
+.filterrow { display:flex;gap:9px;flex-wrap:wrap;margin-top:9px; }
+.filterchoice { flex:1;min-width:100px;display:flex;align-items:center;justify-content:center;gap:7px;background:var(--panel2);border:1px solid var(--line);color:var(--text); }
+.filterchoice[aria-pressed="true"] { border-color:var(--blue);background:#0a84ff22;box-shadow:0 0 0 1px var(--blue) inset; }
+.sticker { display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;font-size:16px;background:#34343a; }
+.friendrow { display:flex;gap:8px;align-items:center; }
+.friendrow input { min-width:0; }
+@media(max-width:760px){ .layout{grid-template-columns:1fr;} .preview{min-height:370px;} .steps{grid-template-columns:1fr;} .topbar{height:64px;} main{padding-top:28px;} }
+</style>
+</head>
+<body>
+<div id="app">
+<header class="topbar">
+  <div class="brand"><span class="logo">MZ</span> MonkeyZone</div>
+  <span class="pill"><span class="dot"></span> Teen-safe concept</span>
+</header>
+<main>
+  <section class="hero">
+    <div class="eyebrow">Meet. Chat. Keep it respectful.</div>
+    <h1>Your next conversation starts here.</h1>
+    <p>MonkeyZone is a teen-safe random chat concept with one-to-one video, text chat, and quick ways to leave or report a problem.</p>
+  </section>
+  <section class="layout">
+    <div class="card">
+      <h2>Find someone to chat with</h2>
+      <p class="sub">This preview shows the flow. Random matching needs a live matchmaking service before strangers can actually connect.</p>
+      <label class="fieldlabel" for="nickname">Choose a display name</label>
+      <input id="nickname" maxlength="24" placeholder="Don't use your full name" autocomplete="nickname">
+      <label class="fieldlabel" for="code">Invite code (optional)</label>
+      <input id="code" maxlength="6" placeholder="6-digit code" inputmode="numeric" autocomplete="off">
+      <label class="fieldlabel">Who do you want to meet?</label>
+      <div class="filterrow" role="group" aria-label="Gender preference">
+        <button class="filterchoice" data-filter="men" aria-pressed="false"><span class="sticker">👨</span> Men</button>
+        <button class="filterchoice" data-filter="women" aria-pressed="false"><span class="sticker">👩</span> Women</button>
+        <button class="filterchoice" data-filter="both" aria-pressed="true"><span class="sticker">👫</span> Both</button>
+      </div>
+      <p class="note">These stickers show the selected preference; a real matching service must verify profiles and apply this filter.</p>
+      <label class="fieldlabel" for="friendName">Add a friend by username (preview)</label>
+      <div class="friendrow"><input id="friendName" maxlength="24" placeholder="Friend's username" autocomplete="off"><button class="secondary" id="addFriendBtn">＋ Add</button></div>
+      <div id="friendList" class="toast" aria-live="polite">No friends added yet.</div>
+      <div class="actions"><button class="secondary" id="inviteFriendBtn">✉ Invite friend to call</button></div>
+      <div class="actions">
+        <button class="primary" id="joinBtn">🎲 Find a chat</button>
+        <button class="secondary" id="createBtn">＋ Create invite room</button>
+      </div>
+      <div class="actions"><button class="secondary" id="reportBtn">⚑ Report / safety help</button><button class="secondary" id="blockBtn">⛔ Block user</button></div>
+      <div id="roomStatus" class="roomstatus hidden" aria-live="polite">
+        <div class="statusline"><strong id="roomTitle">Your room</strong><span class="pill" id="memberPill">Demo only</span></div>
+        <div class="roomcode" id="shownCode">000000</div>
+        <div class="statusline"><span style="color:var(--muted)">Share this code with friends</span><button class="secondary" id="copyBtn" style="padding:8px 10px;font-size:12px">Copy code</button></div>
+      </div>
+      <div id="message" class="toast hidden" role="status"></div>
+      <p class="note">🔒 Never share your full name, school, address, passwords, or socials. Leave any chat that feels uncomfortable.</p>
+    </div>
+    <div class="card preview">
+      <h2>Random video chat</h2>
+      <p class="sub">Your camera stays off until you choose to turn it on.</p>
+      <div class="screen">
+        <span class="screenbadge" id="callBadge">READY TO MATCH</span>
+        <video class="localvideo" id="localVideo" autoplay playsinline muted></video>
+        <div class="avatar" id="avatar">MZ</div>
+        <h3 id="screenName">Meet someone new</h3>
+        <p id="screenText">Tap Find a chat to preview the matching flow. No stranger is connected in this demo.</p>
+      </div>
+      <div class="chatbox" style="margin-top:16px;border:1px solid var(--line);border-radius:15px;padding:13px;background:#101012">
+        <div id="chatLog" style="min-height:62px;max-height:110px;overflow:auto;color:var(--muted);font-size:12px;line-height:1.6">Text chat preview — messages stay on this device.</div>
+        <div style="display:flex;gap:8px;margin-top:10px"><input id="chatInput" maxlength="240" placeholder="Write a respectful message…" aria-label="Chat message" style="min-width:0"><button class="primary" id="sendBtn" style="flex:0 0 auto">Send</button></div>
+      </div>
+      <div class="actions"><button class="secondary" id="nextBtn" style="flex:1">⏭ Next</button></div>
+      <div class="controls">
+        <button class="round" id="micBtn" aria-label="Toggle microphone" title="Toggle microphone">🎙️</button>
+        <button class="round" id="camBtn" aria-label="Toggle camera" title="Toggle camera">📷</button>
+        <button class="round end" id="endBtn" aria-label="Leave call" title="Leave call">☎</button>
+      </div>
+    <p class="note" id="controlNote">Your camera and microphone stay off until you turn them on.</p>
+    </div>
+  </section>
+  <div class="notice">
+    <span style="font-size:20px">ⓘ</span>
+    <div><strong>Teen-safe preview — not a live service</strong><p>Random matching and chat controls below are a front-end demo only. No strangers are matched, text is not sent to other devices, and the report/block buttons cannot alert a moderator until a secure backend is built. A public host, matchmaking/signaling service, moderation, and privacy safeguards are required for a real launch.</p></div>
+  </div>
+  <section class="steps" aria-label="Safety basics">
+    <div class="step"><div class="num">01</div><h3>Keep private details private</h3><p>Use a nickname. Don't reveal your school, location, phone number, or socials.</p></div>
+    <div class="step"><div class="num">02</div><h3>Leave when you want</h3><p>Use Next or leave the chat if someone is rude, pushy, or makes you uncomfortable.</p></div>
+    <div class="step"><div class="num">03</div><h3>Report real problems</h3><p>A real launch needs working moderation, block lists, age-appropriate safeguards, and a way for reports to reach staff.</p></div>
+  </section>
+  <footer>MonkeyZone · Teen-safe prototype · Not a live random chat service yet.</footer>
+</main>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+let currentCode = '';
+let blockedDemo = false;
+let micOn = true;
+let camOn = false;
+let localStream = null;
+let selectedFilter = 'both';
+let friends = [];
+function showMessage(text) { $('message').textContent = text; $('message').classList.remove('hidden'); }
+function makeCode() { return String(Math.floor(100000 + Math.random() * 900000)); }
+document.querySelectorAll('[data-filter]').forEach(button => button.addEventListener('click', () => {
+  selectedFilter = button.dataset.filter;
+  document.querySelectorAll('[data-filter]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+  showMessage('Preference set to ' + ({men:'men',women:'women',both:'men and women'}[selectedFilter]) + '. This preview does not filter real people yet.');
+}));
+$('addFriendBtn').addEventListener('click', () => {
+  const name = $('friendName').value.trim().replace(/^@/, '');
+  if (!name) { showMessage('Enter your friend’s username first.'); $('friendName').focus(); return; }
+  if (friends.some(friend => friend.toLowerCase() === name.toLowerCase())) { showMessage('That friend is already on your preview list.'); return; }
+  friends.push(name); $('friendName').value = '';
+  $('friendList').textContent = '';
+  friends.forEach(friend => { const chip = document.createElement('span'); chip.className = 'pill'; chip.style.margin = '3px'; chip.textContent = '👤 @' + friend; $('friendList').appendChild(chip); });
+  showMessage('@' + name + ' added to this device’s preview list. This does not create an account or send a request yet.');
+});
+$('inviteFriendBtn').addEventListener('click', async () => {
+  if (!friends.length) { showMessage('Add a friend by username first.'); return; }
+  if (!currentCode) { enterRoom(makeCode(), true); }
+  const invite = 'Join my MonkeyZone call with room code ' + currentCode + '. Open MonkeyZone and enter this code.';
+  try { if (navigator.share) await navigator.share({title:'MonkeyZone call invite',text:invite}); else if (navigator.clipboard) { await navigator.clipboard.writeText(invite); showMessage('Invite text copied. Send it to @' + friends[0] + ' yourself; in-app friend notifications are not connected yet.'); } else showMessage(invite); }
+  catch (err) { if (err.name !== 'AbortError') showMessage('Invite ready: ' + invite); }
+});
+async function startCamera() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { showMessage('Camera access needs a secure HTTPS website. Open the hosted site, not a local preview.'); return; }
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: micOn });
+    $('localVideo').srcObject = localStream;
+    $('localVideo').style.display = 'block';
+    $('avatar').style.display = 'none';
+    camOn = true;
+    $('camBtn').classList.add('active');
+    $('camBtn').textContent = '📷';
+    $('controlNote').textContent = 'Your camera preview is on. It is only visible on this device; friends are not connected yet.';
+    showMessage('Camera permission granted. This is a local preview only, not a FaceTime-style group call yet.');
+  } catch (err) { showMessage(err.name === 'NotAllowedError' ? 'Camera/microphone permission was blocked. Allow it in your browser site settings if permitted by your school.' : 'Could not start camera. Check that a camera is connected and not being used by another app.'); }
+}
+function stopLocalMedia() {
+  if (localStream) localStream.getTracks().forEach(track => track.stop());
+  localStream = null;
+  $('localVideo').srcObject = null;
+  $('localVideo').style.display = 'none';
+  $('avatar').style.display = 'grid';
+  camOn = false;
+  micOn = false;
+  $('camBtn').classList.remove('active');
+  $('micBtn').classList.remove('active');
+  $('camBtn').textContent = '📷';
+  $('micBtn').textContent = '🎙️';
+}
+function enterRoom(code, created) {
+  const name = $('nickname').value.trim() || 'Guest';
+  currentCode = code;
+  $('code').value = code;
+  $('shownCode').textContent = code;
+  $('roomTitle').textContent = created ? 'Room created' : 'Room preview';
+  $('memberPill').textContent = 'Demo only';
+  $('roomStatus').classList.remove('hidden');
+  $('avatar').textContent = name.slice(0,2).toUpperCase();
+  $('screenName').textContent = name;
+  $('screenText').textContent = `Room ${code} is ready in this demo. Your friends are not actually connected.`;
+  $('callBadge').textContent = 'ROOM PREVIEW';
+  showMessage(created ? 'Room code made! Copy it to show how invites will work. No other device can join this prototype room yet.' : 'Code accepted for the demo. Real rooms need an online signaling service before friends can connect.');
+}
+function addChatLine(label, message) {
+  const line = document.createElement('div');
+  line.textContent = label + ': ' + message;
+  $('chatLog').appendChild(line);
+  $('chatLog').scrollTop = $('chatLog').scrollHeight;
+}
+$('sendBtn').addEventListener('click', () => {
+  const message = $('chatInput').value.trim();
+  if (!message) return;
+  addChatLine('You', message);
+  $('chatInput').value = '';
+  addChatLine('MonkeyZone', 'Preview only — this message was not sent to another person.');
+});
+$('chatInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('sendBtn').click(); });
+$('nextBtn').addEventListener('click', () => {
+  if (localStream) localStream.getTracks().forEach(track => track.stop());
+  localStream = null;
+  $('localVideo').srcObject = null; $('localVideo').style.display = 'none'; $('avatar').style.display = 'grid';
+  $('callBadge').textContent = 'SEARCHING (DEMO)'; $('screenName').textContent = 'Looking for someone…';
+  $('screenText').textContent = 'This is only a visual demo. No random user will connect until a real matching backend is added.';
+  $('camBtn').classList.remove('active'); $('micBtn').classList.remove('active');
+  showMessage('Next pressed. Random matching is not connected in this prototype.');
+});
+$('reportBtn').addEventListener('click', () => showMessage('Safety demo: leave the chat and tell a trusted adult if someone threatens, harasses, or asks for private information. This button does not send a report to a moderator yet.'));
+$('blockBtn').addEventListener('click', () => { blockedDemo = true; showMessage('Block demo activated on this screen only. A real block list needs a backend and user accounts or persistent identifiers.'); });
+$('createBtn').addEventListener('click', () => enterRoom(makeCode(), true));
+$('joinBtn').addEventListener('click', () => {
+  const code = $('code').value.replace(/\D/g,'').slice(0,6);
+  if (code.length !== 6) { showMessage('Enter the 6-digit room code first.'); $('code').focus(); return; }
+  enterRoom(code, false);
+});
+$('code').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g,'').slice(0,6); });
+$('copyBtn').addEventListener('click', async () => {
+  if (!currentCode) return;
+  try { await navigator.clipboard.writeText(currentCode); showMessage('Room code copied. Remember: it is only a demo code and cannot connect friends yet.'); }
+  catch { $('code').select(); showMessage('Clipboard access unavailable here. You can select and copy the code manually.'); }
+});
+$('micBtn').addEventListener('click', async () => {
+  if (!localStream) { micOn = !micOn; $('micBtn').classList.toggle('active', !micOn); $('micBtn').textContent = micOn ? '🎙️' : '🔇'; showMessage('Microphone preview setting changed. Turn on the camera first to request mic access.'); return; }
+  const track = localStream.getAudioTracks()[0];
+  if (!track && !micOn) { showMessage('Restart the camera to request microphone access too.'); return; }
+  micOn = !micOn;
+  if (track) track.enabled = micOn;
+  $('micBtn').classList.toggle('active', !micOn);
+  $('micBtn').textContent = micOn ? '🎙️' : '🔇';
+  $('controlNote').textContent = `Local preview only. Microphone ${micOn ? 'on' : 'muted'}; camera ${camOn ? 'on' : 'off'}. Friends are not connected.`;
+});
+$('camBtn').addEventListener('click', async () => {
+  if (!localStream || !camOn) { await startCamera(); return; }
+  localStream.getVideoTracks().forEach(track => track.stop());
+  camOn = false;
+  $('localVideo').style.display = 'none';
+  $('avatar').style.display = 'grid';
+  $('camBtn').classList.remove('active');
+  $('controlNote').textContent = 'Camera is off. Your microphone may still be active locally; no media is sent to friends.';
+});
+$('endBtn').addEventListener('click', () => { stopLocalMedia(); currentCode = ''; $('roomStatus').classList.add('hidden'); $('callBadge').textContent = 'NOT IN A CALL'; $('screenName').textContent = 'Call ended'; $('screenText').textContent = 'You left the demo room. No real call was active.'; showMessage('Camera and microphone stopped. You left the demo room.'); });
+</script>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+// Live one-to-one calling layer. This requires the page to be hosted over HTTPS.
+let livePeer = null;
+let liveStream = null;
+let liveCall = null;
+let liveRoomCode = '';
+let liveRole = '';
+let liveMicOn = true;
+let liveCamOn = false;
+const liveById = id => document.getElementById(id);
+function liveNotice(message) { liveById('message').textContent = message; liveById('message').classList.remove('hidden'); }
+function liveResetPeer() {
+  if (liveCall) { liveCall.close(); liveCall = null; }
+  if (livePeer) { livePeer.destroy(); livePeer = null; }
+}
+async function liveGetMedia() {
+  if (liveStream) return liveStream;
+  if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera and microphone need an HTTPS-hosted page.');
+  liveStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+  liveById('localVideo').srcObject = liveStream;
+  liveById('localVideo').style.display = 'block';
+  liveById('avatar').style.display = 'none';
+  liveCamOn = true; liveMicOn = true;
+  liveById('camBtn').classList.add('active'); liveById('micBtn').classList.add('active');
+  return liveStream;
+}
+function liveShowRemote(stream) {
+  let remote = liveById('remoteVideo');
+  if (!remote) {
+    remote = document.createElement('video'); remote.id = 'remoteVideo'; remote.autoplay = true; remote.playsInline = true;
+    remote.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:18px;background:#101012;z-index:1';
+    liveById('localVideo').parentElement.appendChild(remote);
+  }
+  remote.srcObject = stream;
+  liveById('callBadge').textContent = 'CONNECTED';
+  liveById('screenText').textContent = 'You are connected to your friend.';
+}
+function liveStartPeer(code, role) {
+  liveResetPeer(); liveRoomCode = code; liveRole = role;
+  if (!window.Peer) throw new Error('The calling library was blocked by the browser or network.');
+  livePeer = new Peer('schoolconnect-' + code, { debug: 1 });
+  livePeer.on('open', id => {
+    liveNotice(role === 'host' ? 'Room is live. Turn on your camera, then share the code with your friend.' : 'Connecting to room…');
+    if (role === 'guest') liveConnectToHost();
+  });
+  livePeer.on('call', async call => {
+    try { const stream = await liveGetMedia(); liveCall = call; call.answer(stream); call.on('stream', liveShowRemote); call.on('close', () => liveNotice('Your friend left the call.')); }
+    catch (e) { liveNotice(e.message || 'Allow camera and microphone access to answer the call.'); }
+  });
+  livePeer.on('error', err => liveNotice(err.type === 'unavailable-id' ? 'That room code is already in use. Create a new room.' : 'Could not connect. The school network may block live calling.'));
+}
+async function liveConnectToHost() {
+  try {
+    const stream = await liveGetMedia();
+    liveCall = livePeer.call('schoolconnect-' + liveRoomCode, stream);
+    if (!liveCall) throw new Error('Could not start the call. Check the room code and try again.');
+    liveCall.on('stream', liveShowRemote);
+    liveCall.on('close', () => liveNotice('Call ended.'));
+    liveNotice('Calling the room… allow camera and microphone if prompted.');
+  } catch (e) { liveNotice(e.message || 'Could not access camera and microphone.'); }
+}
+liveById('createBtn').addEventListener('click', e => {
+  e.stopImmediatePropagation(); e.preventDefault();
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  liveById('code').value = code; liveById('shownCode').textContent = code;
+  liveById('roomTitle').textContent = 'Live room'; liveById('memberPill').textContent = 'Waiting for friend';
+  liveById('roomStatus').classList.remove('hidden'); liveById('callBadge').textContent = 'WAITING FOR FRIEND';
+  liveById('screenName').textContent = liveById('nickname').value.trim() || 'You';
+  liveById('screenText').textContent = 'Share the room code, then turn on your camera.';
+  try { liveStartPeer(code, 'host'); } catch (err) { liveNotice(err.message); }
+}, true);
+liveById('joinBtn').addEventListener('click', e => {
+  e.stopImmediatePropagation(); e.preventDefault();
+  const code = liveById('code').value.replace(/\D/g, '').slice(0, 6);
+  if (code.length !== 6) {
+    liveById('roomStatus').classList.add('hidden');
+    liveById('callBadge').textContent = 'SEARCHING (DEMO)';
+    liveById('screenName').textContent = 'Looking for someone…';
+    liveById('screenText').textContent = 'Random matching is a preview only. No stranger will connect until a real matchmaking service is added.';
+    liveNotice('Searching animation only — random matching is not connected yet.');
+    return;
+  }
+  liveById('shownCode').textContent = code; liveById('roomTitle').textContent = 'Joining live room';
+  liveById('memberPill').textContent = 'Connecting'; liveById('roomStatus').classList.remove('hidden');
+  liveById('callBadge').textContent = 'CONNECTING'; liveById('screenName').textContent = liveById('nickname').value.trim() || 'You';
+  try { liveStartPeer(code, 'guest'); } catch (err) { liveNotice(err.message); }
+}, true);
+liveById('camBtn').addEventListener('click', async e => {
+  e.stopImmediatePropagation(); e.preventDefault();
+  if (!livePeer || !liveRoomCode) { liveNotice('Create a room or join with a code first.'); return; }
+  try {
+    if (!liveStream) { await liveGetMedia(); if (liveRole === 'guest') await liveConnectToHost(); else liveNotice('Camera is on. Your friend can join with the room code.'); }
+    else { liveStream.getVideoTracks().forEach(t => { t.enabled = !t.enabled; }); liveCamOn = liveStream.getVideoTracks().some(t => t.enabled); liveById('camBtn').classList.toggle('active', liveCamOn); liveNotice(liveCamOn ? 'Camera is on.' : 'Camera is off.'); }
+  } catch (err) { liveNotice(err.message || 'Camera permission was blocked.'); }
+}, true);
+liveById('micBtn').addEventListener('click', e => {
+  e.stopImmediatePropagation(); e.preventDefault();
+  if (!liveStream) { liveNotice('Turn on the camera first to request microphone access.'); return; }
+  liveMicOn = !liveMicOn; liveStream.getAudioTracks().forEach(t => t.enabled = liveMicOn);
+  liveById('micBtn').textContent = liveMicOn ? '🎙️' : '🔇'; liveById('micBtn').classList.toggle('active', liveMicOn);
+  liveNotice(liveMicOn ? 'Microphone is on.' : 'Microphone is muted.');
+}, true);
+liveById('endBtn').addEventListener('click', e => {
+  e.stopImmediatePropagation(); e.preventDefault(); liveResetPeer();
+  if (liveStream) liveStream.getTracks().forEach(t => t.stop()); liveStream = null;
+  liveById('localVideo').srcObject = null; liveById('localVideo').style.display = 'none'; liveById('avatar').style.display = 'grid';
+  const remote = liveById('remoteVideo'); if (remote) { remote.srcObject = null; remote.remove(); }
+  liveById('camBtn').classList.remove('active'); liveById('micBtn').classList.remove('active');
+  liveById('camBtn').textContent = '📷'; liveById('micBtn').textContent = '🎙️';
+  liveById('callBadge').textContent = 'CALL ENDED'; liveById('screenText').textContent = 'You left the call.'; liveById('roomStatus').classList.add('hidden');
+  liveRoomCode = ''; liveRole = ''; liveNotice('Call ended. Your camera and microphone are off.');
+}, true);
+</script>
+</body>
+</html>
